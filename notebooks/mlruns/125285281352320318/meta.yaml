@@ -1,0 +1,6 @@
+artifact_location: file:///home/shna/MLOpsEndtoEnd/notebooks/mlruns/125285281352320318
+creation_time: 1752418344696
+experiment_id: '125285281352320318'
+last_update_time: 1752418344696
+lifecycle_stage: active
+name: house-price-prediction-development

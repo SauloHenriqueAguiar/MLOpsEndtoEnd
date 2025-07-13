@@ -1,0 +1,14 @@
+artifact_uri: file:///home/shna/MLOpsEndtoEnd/notebooks/mlruns/125285281352320318/e917da925dd94860bc0a2230bd33898f/artifacts
+end_time: 1752419138589
+entry_point_name: ''
+experiment_id: '125285281352320318'
+lifecycle_stage: active
+run_id: e917da925dd94860bc0a2230bd33898f
+run_name: final_evaluation
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1752419132322
+status: 3
+tags: []
+user_id: shna

@@ -1,0 +1,10 @@
+artifact_location: file:///home/shna/MLOpsEndtoEnd/notebooks/mlruns/125285281352320318/models/m-4ed6e8045ea14dacbd6216bfec523a68/artifacts
+creation_timestamp: 1752418434412
+experiment_id: '125285281352320318'
+last_updated_timestamp: 1752418442092
+model_id: m-4ed6e8045ea14dacbd6216bfec523a68
+model_type: null
+name: model
+source_run_id: 6a4d3310c4c74752b86d079c944a0fcc
+status: 2
+status_message: null

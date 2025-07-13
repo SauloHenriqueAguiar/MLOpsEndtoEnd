@@ -1,0 +1,14 @@
+artifact_uri: file:///home/shna/MLOpsEndtoEnd/notebooks/mlruns/125285281352320318/6a4d3310c4c74752b86d079c944a0fcc/artifacts
+end_time: 1752418442104
+entry_point_name: ''
+experiment_id: '125285281352320318'
+lifecycle_stage: active
+run_id: 6a4d3310c4c74752b86d079c944a0fcc
+run_name: baseline_random_forest
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1752418433612
+status: 3
+tags: []
+user_id: shna

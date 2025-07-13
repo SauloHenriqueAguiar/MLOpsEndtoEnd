@@ -1,0 +1,24 @@
+{
+  "model_ready": true,
+  "model_path": "../data/models/random_forest_model.pkl",
+  "encoder_path": "../data/models/label_encoder.pkl",
+  "performance": {
+    "r2_score": 0.9670430185664095,
+    "rmse": 30881.8718140358,
+    "mae": 23859.86567730049
+  },
+  "features_required": [
+    "area",
+    "quartos",
+    "banheiros",
+    "idade",
+    "garagem",
+    "bairro_encoded",
+    "area_per_room",
+    "bathroom_ratio",
+    "age_squared",
+    "total_rooms",
+    "is_new"
+  ],
+  "deployment_ready": true
+}

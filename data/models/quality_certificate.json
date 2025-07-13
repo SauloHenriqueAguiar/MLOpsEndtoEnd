@@ -1,0 +1,22 @@
+{
+  "model_id": "house_price_rf_20250713_122520",
+  "certification_date": "2025-07-13T12:25:20.839911",
+  "certification_status": "APPROVED",
+  "quality_score": 100.0,
+  "validated_metrics": {
+    "r2_score": 0.9670430185664095,
+    "rmse": 30881.871814035792,
+    "accuracy_rate": 98.98477157360406
+  },
+  "certification_criteria": [
+    "R² Score: 0.9670 ≥ 0.70 ✅",
+    "Prediction Coverage: 100.0% ≥ 95% ✅",
+    "Accuracy Rate: 99.0% ≥ 70% ✅",
+    "Robustness: 0.5% drop ≤ 20% ✅"
+  ],
+  "approved_for_production": true,
+  "expiry_date": "2026-01-13T12:25:20.839845",
+  "expiry_date_readable": "2026-01-13",
+  "validity_period": "6 months from certification",
+  "validator": "MLOps Validation Pipeline"
+}

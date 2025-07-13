@@ -1,0 +1,50 @@
+{
+  "model_name": "Random Forest Regressor",
+  "model_type": "Otimizado",
+  "best_params": {
+    "max_depth": 10,
+    "max_features": null,
+    "min_samples_leaf": 1,
+    "min_samples_split": 2,
+    "n_estimators": 300
+  },
+  "final_rmse": 30881.8718140358,
+  "final_mae": 23859.86567730049,
+  "final_r2": 0.9670430185664095,
+  "final_mape": 5.284275804913592,
+  "training_samples": 787,
+  "test_samples": 197,
+  "features": [
+    "area",
+    "quartos",
+    "banheiros",
+    "idade",
+    "garagem",
+    "bairro_encoded",
+    "area_per_room",
+    "bathroom_ratio",
+    "age_squared",
+    "total_rooms",
+    "is_new"
+  ],
+  "feature_importance": {
+    "area": 0.5779387127260668,
+    "bairro_encoded": 0.39701517968957833,
+    "total_rooms": 0.005796685148116593,
+    "area_per_room": 0.004982885537258673,
+    "age_squared": 0.003599097069525807,
+    "idade": 0.0035091218455191404,
+    "quartos": 0.002047579458894341,
+    "bathroom_ratio": 0.0018912481201530094,
+    "banheiros": 0.0014048676897277562,
+    "garagem": 0.0013921452766208586,
+    "is_new": 0.00042247743853875526
+  },
+  "training_date": "2025-07-13 12:09:01",
+  "cv_rmse_mean": 36409.14085736925,
+  "residual_stats": {
+    "mean": 220.54790710239567,
+    "std": 30959.762313839095,
+    "outliers_count": 10
+  }
+}

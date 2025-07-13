@@ -1,0 +1,14 @@
+artifact_uri: file:///home/shna/MLOpsEndtoEnd/notebooks/mlruns/125285281352320318/de3f1a20417143b39567bf3793d7eaae/artifacts
+end_time: 1752418518450
+entry_point_name: ''
+experiment_id: '125285281352320318'
+lifecycle_stage: active
+run_id: de3f1a20417143b39567bf3793d7eaae
+run_name: hyperparameter_tuning
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1752418490567
+status: 4
+tags: []
+user_id: shna

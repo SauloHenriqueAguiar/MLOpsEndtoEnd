@@ -1,0 +1,185 @@
+{
+  "timestamp": "2025-07-13T12:25:20.836404",
+  "validation_status": "PASSED",
+  "readiness_score": 100.0,
+  "metrics": {
+    "mse": 953690006.7385384,
+    "rmse": 30881.871814035792,
+    "mae": 23859.8656773005,
+    "r2": 0.9670430185664095,
+    "mape": 5.284275804913592,
+    "residuals_mean": 220.54790710240098,
+    "residuals_std": 30959.76231383909,
+    "range_metrics": {
+      "R$0k-200k": {
+        "r2": NaN,
+        "rmse": 23338.350240480475,
+        "count": 1
+      },
+      "R$200k-400k": {
+        "r2": 0.7590703912710501,
+        "rmse": 25403.65919628174,
+        "count": 60
+      },
+      "R$400k-600k": {
+        "r2": 0.7719446099454847,
+        "rmse": 29856.333710113486,
+        "count": 91
+      },
+      "R$600k-∞k": {
+        "r2": 0.8778188774375918,
+        "rmse": 38728.123116130126,
+        "count": 45
+      }
+    }
+  },
+  "production_metrics": {
+    "prediction_coverage": 100.0,
+    "avg_confidence_interval": 60681.134135124616,
+    "accuracy_rate_20pct": 98.98477157360406,
+    "error_quartiles": {
+      "Q1": 2.062851646586389,
+      "Q2": 4.140579043723083,
+      "Q3": 7.798361576090689,
+      "Q95": 12.884990582596211
+    },
+    "prediction_stability": 0.3400117576923516
+  },
+  "robustness_results": {
+    "base_r2": 0.9670430185664095,
+    "noise_tests": [
+      {
+        "noise_level": 0.01,
+        "r2": 0.9673165380415231,
+        "r2_drop_pct": -0.02828410627678567
+      },
+      {
+        "noise_level": 0.05,
+        "r2": 0.9670368532372915,
+        "r2_drop_pct": 0.0006375444524849388
+      },
+      {
+        "noise_level": 0.1,
+        "r2": 0.9622859379493074,
+        "r2_drop_pct": 0.4919202688784454
+      }
+    ]
+  },
+  "scenario_results": {
+    "1_quartos": {
+      "r2": 0.9800784425526686,
+      "rmse": 21972.550118435312,
+      "count": 12
+    },
+    "2_quartos": {
+      "r2": 0.9518125612501094,
+      "rmse": 33838.88101588552,
+      "count": 53
+    },
+    "3_quartos": {
+      "r2": 0.9759020371857925,
+      "rmse": 25519.45487829925,
+      "count": 82
+    },
+    "4_quartos": {
+      "r2": 0.9654922265202397,
+      "rmse": 38083.324456345676,
+      "count": 36
+    },
+    "5_quartos": {
+      "r2": 0.9457360737593237,
+      "rmse": 33573.582089732074,
+      "count": 14
+    },
+    "área_pequena": {
+      "r2": 0.8987287546437828,
+      "rmse": 34914.70963488638,
+      "count": 50
+    },
+    "área_média": {
+      "r2": 0.9544204541574104,
+      "rmse": 26865.834840568295,
+      "count": 99
+    },
+    "área_grande": {
+      "r2": 0.963718026573112,
+      "rmse": 33873.75940210819,
+      "count": 50
+    },
+    "imóvel_novo": {
+      "r2": 0.9552285779679016,
+      "rmse": 35033.152342051675,
+      "count": 78
+    },
+    "imóvel_moderno": {
+      "r2": 0.9757294634723143,
+      "rmse": 27124.829219456205,
+      "count": 93
+    },
+    "imóvel_antigo": {
+      "r2": 0.9661160598269924,
+      "rmse": 30204.74511540359,
+      "count": 26
+    }
+  },
+  "edge_case_results": [
+    {
+      "description": "Imóvel mínimo",
+      "inputs": "30m², 1Q, 1B, 0anos, Zona Leste",
+      "prediction": 187728.5680914998
+    },
+    {
+      "description": "Imóvel luxo",
+      "inputs": "500m², 5Q, 4B, 0anos, Zona Sul",
+      "prediction": 1160928.988552041
+    },
+    {
+      "description": "Imóvel muito antigo",
+      "inputs": "100m², 1Q, 1B, 50anos, Centro",
+      "prediction": 450967.8647036236
+    },
+    {
+      "description": "Mais banheiros que quartos",
+      "inputs": "50m², 1Q, 2B, 5anos, Zona Norte",
+      "prediction": 192021.6223528908
+    },
+    {
+      "description": "Poucos banheiros para muitos quartos",
+      "inputs": "200m², 4Q, 1B, 10anos, Zona Oeste",
+      "prediction": 699487.6102387067
+    }
+  ],
+  "monitoring_report": {
+    "timestamp": "2025-07-13T12:22:10.118606",
+    "model_info": {
+      "type": "Random Forest Regressor",
+      "training_date": "2025-07-13 12:09:01",
+      "n_features": 11,
+      "n_estimators": 300
+    },
+    "validation_metrics": {
+      "r2_score": 0.9670430185664095,
+      "rmse": 30881.871814035792,
+      "mae": 23859.8656773005,
+      "mape": 5.284275804913592
+    },
+    "production_readiness": {
+      "score": 100.0,
+      "criteria_passed": 4,
+      "total_criteria": 4,
+      "approved": true
+    },
+    "robustness": {
+      "max_performance_drop": 0.4919202688784454,
+      "noise_tolerance": "Good"
+    },
+    "reliability": {
+      "prediction_coverage": 100.0,
+      "accuracy_rate_20pct": 98.98477157360406,
+      "confidence_interval": 60681.134135124616
+    },
+    "recommendations": [
+      "Modelo robusto e pronto para produção - implementar monitoramento padrão"
+    ]
+  }
+}
