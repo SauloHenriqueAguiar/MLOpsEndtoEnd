@@ -1,0 +1,384 @@
+# Configuração específica do modelo Random Forest
+# model_config.yaml
+
+# Metadados do modelo
+model:
+  name: "RandomForestRegressor"
+  type: "regressor"
+  algorithm: "random_forest"
+  version: "1.0.0"
+  framework: "scikit-learn"
+  
+  # Descrição
+  description: "Random Forest Regressor para predição de preços de imóveis"
+  use_case: "Predição de preços baseada em características do imóvel"
+  target_variable: "preco"
+  
+  # Autor e datas
+  author: "MLOps Team"
+  created_date: "2024-01-15"
+  last_updated: "2024-01-15"
+
+# Configurações do algoritmo Random Forest
+random_forest:
+  # Parâmetros básicos
+  basic_params:
+    n_estimators: 100
+    random_state: 42
+    n_jobs: -1
+    
+  # Parâmetros de controle de overfitting
+  tree_params:
+    max_depth: null  # None significa sem limite
+    min_samples_split: 2
+    min_samples_leaf: 1
+    max_features: "sqrt"  # auto, sqrt, log2, None, int, float
+    
+  # Parâmetros de bootstrap
+  bootstrap_params:
+    bootstrap: true
+    oob_score: false
+    
+  # Parâmetros de performance
+  performance_params:
+    warm_start: false
+    ccp_alpha: 0.0
+    max_samples: null
+
+# Grid Search para otimização de hiperparâmetros
+hyperparameter_optimization:
+  # Ativar/desativar otimização
+  enabled: true
+  method: "grid_search"
+  
+  # Parâmetros para testar
+  param_grid:
+    n_estimators: [100, 200, 300]
+    max_depth: [10, 20, null]
+    min_samples_split: [2, 5, 10]
+    min_samples_leaf: [1, 2, 4]
+    max_features: ["sqrt", "log2", null]
+    
+  # Configurações do Grid Search
+  grid_search:
+    cv: 5
+    scoring: "neg_mean_squared_error"
+    n_jobs: -1
+    verbose: 1
+    refit: true
+    
+  # Configurações alternativas (Random Search)
+  random_search:
+    n_iter: 50
+    cv: 5
+    scoring: "neg_mean_squared_error"
+    n_jobs: -1
+    random_state: 42
+    
+  # Configurações de Bayesian Optimization (para futuro)
+  bayesian_optimization:
+    n_calls: 50
+    n_initial_points: 10
+    acquisition_function: "gp_hedge"
+    random_state: 42
+
+# Configurações de validação do modelo
+validation:
+  # Validação cruzada
+  cross_validation:
+    method: "k_fold"
+    n_splits: 5
+    shuffle: true
+    random_state: 42
+    
+  # Métricas de avaliação
+  metrics:
+    # Métrica principal
+    primary_metric: "r2_score"
+    
+    # Métricas secundárias
+    regression_metrics:
+      - "mean_squared_error"
+      - "root_mean_squared_error"
+      - "mean_absolute_error"
+      - "mean_absolute_percentage_error"
+      - "r2_score"
+      - "explained_variance_score"
+      
+    # Métricas customizadas
+    custom_metrics:
+      - "median_absolute_error"
+      - "max_error"
+      
+  # Critérios de aceitação
+  acceptance_criteria:
+    min_r2_score: 0.70
+    max_rmse: 100000
+    max_mae: 75000
+    max_mape: 15.0
+    
+  # Testes de robustez
+  robustness_tests:
+    noise_levels: [0.01, 0.05, 0.1]
+    max_performance_drop: 0.2  # 20%
+    
+  # Testes de edge cases
+  edge_case_tests:
+    enabled: true
+    test_scenarios:
+      - name: "minimum_values"
+        area: 30
+        quartos: 1
+        banheiros: 1
+        idade: 0
+        garagem: 0
+        bairro: "Zona Leste"
+      - name: "maximum_values"
+        area: 500
+        quartos: 5
+        banheiros: 4
+        idade: 50
+        garagem: 1
+        bairro: "Zona Sul"
+      - name: "average_values"
+        area: 120
+        quartos: 3
+        banheiros: 2
+        idade: 10
+        garagem: 1
+        bairro: "Centro"
+
+# Configurações de feature engineering
+feature_engineering:
+  # Features derivadas
+  derived_features:
+    area_per_room:
+      formula: "area / (quartos + 1)"
+      description: "Área por cômodo"
+      
+    bathroom_ratio:
+      formula: "banheiros / quartos"
+      description: "Proporção de banheiros por quarto"
+      
+    age_squared:
+      formula: "idade ** 2"
+      description: "Idade ao quadrado para capturar não-linearidade"
+      
+    total_rooms:
+      formula: "quartos + banheiros"
+      description: "Total de cômodos"
+      
+    is_new:
+      formula: "idade < 5"
+      description: "Indicador de imóvel novo (menos de 5 anos)"
+      
+  # Transformações
+  transformations:
+    scaling:
+      method: null  # "standard", "minmax", "robust", null
+      features: []
+      
+    encoding:
+      categorical_method: "label_encoder"
+      features: ["bairro"]
+      
+  # Seleção de features
+  feature_selection:
+    enabled: false
+    method: "recursive_feature_elimination"
+    n_features: 10
+    
+# Configurações de treinamento
+training:
+  # Dados de treinamento
+  data_requirements:
+    min_samples: 100
+    max_samples: 100000
+    min_features: 5
+    
+  # Configurações de seed
+  reproducibility:
+    random_seed: 42
+    set_global_seed: true
+    
+  # Early stopping (não aplicável ao Random Forest)
+  early_stopping:
+    enabled: false
+    
+  # Regularização
+  regularization:
+    enabled: false  # Random Forest tem regularização implícita
+    
+  # Configurações de memória
+  memory:
+    max_memory_gb: 8
+    optimize_memory: true
+
+# Configurações de inferência/predição
+inference:
+  # Configurações de batch
+  batch_processing:
+    enabled: true
+    max_batch_size: 1000
+    timeout_seconds: 30
+    
+  # Configurações de predição individual
+  single_prediction:
+    timeout_seconds: 5
+    
+  # Pós-processamento
+  post_processing:
+    clip_predictions: true
+    min_prediction: 50000
+    max_prediction: 2000000
+    
+  # Intervalos de confiança
+  confidence_intervals:
+    enabled: true
+    confidence_level: 0.95
+    method: "bootstrap"  # "bootstrap", "quantile_regression"
+
+# Configurações de interpretabilidade
+interpretability:
+  # Feature importance
+  feature_importance:
+    enabled: true
+    method: "built_in"  # "built_in", "permutation", "shap"
+    
+  # SHAP values (para futuro)
+  shap:
+    enabled: false
+    explainer_type: "tree"
+    max_samples: 1000
+    
+  # Partial dependence plots
+  partial_dependence:
+    enabled: false
+    features: ["area", "idade", "quartos"]
+
+# Configurações de monitoramento em produção
+production_monitoring:
+  # Data drift
+  data_drift:
+    enabled: true
+    reference_dataset: "training_data"
+    drift_threshold: 0.1
+    
+  # Model drift
+  model_drift:
+    enabled: true
+    performance_threshold: 0.05  # 5% drop in performance
+    
+  # Alertas
+  alerts:
+    enabled: true
+    metrics_to_monitor:
+      - "r2_score"
+      - "rmse"
+      - "mae"
+      - "prediction_distribution"
+      
+  # Logging de predições
+  prediction_logging:
+    enabled: true
+    sample_rate: 0.1  # 10% das predições
+    
+# Configurações de retreinamento
+retraining:
+  # Triggers para retreinamento
+  triggers:
+    schedule:
+      enabled: true
+      frequency: "monthly"  # "daily", "weekly", "monthly"
+      
+    performance_degradation:
+      enabled: true
+      threshold: 0.1  # 10% drop in R²
+      
+    data_drift:
+      enabled: true
+      threshold: 0.15
+      
+  # Configurações de retreinamento
+  strategy:
+    method: "full_retrain"  # "full_retrain", "incremental"
+    validation_split: 0.2
+    
+  # Aprovação automática
+  auto_approval:
+    enabled: false
+    min_improvement: 0.02  # 2% improvement required
+    
+# Configurações específicas por ambiente
+environments:
+  development:
+    random_forest:
+      n_estimators: 50  # Menos árvores para desenvolvimento rápido
+    hyperparameter_optimization:
+      enabled: false
+    validation:
+      cross_validation:
+        n_splits: 3
+        
+  staging:
+    random_forest:
+      n_estimators: 100
+    hyperparameter_optimization:
+      enabled: true
+      param_grid:
+        n_estimators: [50, 100, 200]
+        max_depth: [10, null]
+        
+  production:
+    random_forest:
+      n_estimators: 200  # Mais árvores para melhor performance
+    hyperparameter_optimization:
+      enabled: true
+    production_monitoring:
+      enabled: true
+      
+# Configurações de versionamento
+versioning:
+  # Estratégia de versionamento
+  strategy: "semantic"  # "semantic", "timestamp", "incremental"
+  
+  # Auto-increment
+  auto_increment: true
+  
+  # Metadados de versão
+  track_metadata:
+    - "training_data_hash"
+    - "feature_engineering_version"
+    - "hyperparameters"
+    - "performance_metrics"
+    
+# Configurações de compliance e auditoria
+compliance:
+  # Auditoria
+  audit_trail:
+    enabled: true
+    track_predictions: true
+    track_model_updates: true
+    
+  # Explicabilidade
+  explainability:
+    required: false
+    method: "feature_importance"
+    
+  # Bias detection
+  bias_detection:
+    enabled: false
+    protected_attributes: []
+    
+# Configurações de backup e recovery
+backup:
+  # Backup automático
+  auto_backup:
+    enabled: true
+    frequency: "daily"
+    retention_days: 30
+    
+  # Versionamento de modelos
+  model_versioning:
+    max_versions: 10
+    cleanup_old_versions: true

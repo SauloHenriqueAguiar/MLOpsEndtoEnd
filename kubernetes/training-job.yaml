@@ -1,0 +1,197 @@
+# Training Job for House Price Model
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: house-price-training
+  namespace: mlops
+  labels:
+    app: house-price-training
+    component: ml-training
+    job-type: model-training
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400  # 24 hours
+  template:
+    metadata:
+      labels:
+        app: house-price-training
+        component: ml-training
+    spec:
+      serviceAccountName: mlops-service-account
+      restartPolicy: Never
+      
+      containers:
+      - name: training
+        image: house-price-training:latest
+        imagePullPolicy: IfNotPresent
+        
+        command: ["python"]
+        args: ["/app/train.py"]
+        
+        env:
+        - name: MLFLOW_TRACKING_URI
+          valueFrom:
+            configMapKeyRef:
+              name: mlops-config
+              key: mlflow_uri
+        - name: MODEL_OUTPUT_PATH
+          value: "/app/data/models"
+        - name: DATA_PATH
+          value: "/app/data/raw"
+        - name: EXPERIMENT_NAME
+          value: "house-price-training"
+        
+        resources:
+          requests:
+            cpu: 1
+            memory: 2Gi
+          limits:
+            cpu: 4
+            memory: 8Gi
+            
+        volumeMounts:
+        - name: model-storage
+          mountPath: /app/data/models
+        - name: data-storage
+          mountPath: /app/data/raw
+          readOnly: true
+        - name: tmp-volume
+          mountPath: /tmp
+          
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+              
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: mlops-model-pvc
+      - name: data-storage
+        persistentVolumeClaim:
+          claimName: mlops-data-pvc
+      - name: tmp-volume
+        emptyDir:
+          sizeLimit: 2Gi
+
+---
+# CronJob for Scheduled Training
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: house-price-training-cron
+  namespace: mlops
+  labels:
+    app: house-price-training
+    component: ml-training
+    job-type: scheduled-training
+spec:
+  schedule: "0 2 * * 0"  # Weekly at 2 AM on Sunday
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 172800  # 48 hours
+      template:
+        metadata:
+          labels:
+            app: house-price-training
+            component: ml-training
+        spec:
+          serviceAccountName: mlops-service-account
+          restartPolicy: Never
+          
+          containers:
+          - name: training
+            image: house-price-training:latest
+            imagePullPolicy: IfNotPresent
+            
+            command: ["python"]
+            args: ["/app/train.py", "--scheduled"]
+            
+            env:
+            - name: MLFLOW_TRACKING_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: mlops-config
+                  key: mlflow_uri
+            - name: MODEL_OUTPUT_PATH
+              value: "/app/data/models"
+            - name: DATA_PATH
+              value: "/app/data/raw"
+            - name: EXPERIMENT_NAME
+              value: "house-price-scheduled-training"
+            
+            resources:
+              requests:
+                cpu: 1
+                memory: 2Gi
+              limits:
+                cpu: 4
+                memory: 8Gi
+                
+            volumeMounts:
+            - name: model-storage
+              mountPath: /app/data/models
+            - name: data-storage
+              mountPath: /app/data/raw
+              readOnly: true
+            - name: tmp-volume
+              mountPath: /tmp
+              
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 1000
+              capabilities:
+                drop:
+                  - ALL
+                  
+          volumes:
+          - name: model-storage
+            persistentVolumeClaim:
+              claimName: mlops-model-pvc
+          - name: data-storage
+            persistentVolumeClaim:
+              claimName: mlops-data-pvc
+          - name: tmp-volume
+            emptyDir:
+              sizeLimit: 2Gi
+
+---
+# PVC for Model Storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mlops-model-pvc
+  namespace: mlops
+  labels:
+    component: storage
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+# PVC for Data Storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mlops-data-pvc
+  namespace: mlops
+  labels:
+    component: storage
+spec:
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: standard

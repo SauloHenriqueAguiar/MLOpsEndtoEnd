@@ -1,0 +1,522 @@
+# Deployment for House Price Prediction API
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: house-price-api
+  namespace: mlops
+  labels:
+    app: house-price-api
+    component: ml-api
+    version: v1.0.0
+    tier: frontend
+    managed-by: kubernetes
+  annotations:
+    description: "FastAPI service for house price predictions"
+    deployment.kubernetes.io/revision: "1"
+    mlops.company.com/model-version: "v1.0.0"
+    mlops.company.com/last-updated: "2024-01-15T10:00:00Z"
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  
+  # Deployment strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+      
+  selector:
+    matchLabels:
+      app: house-price-api
+      
+  template:
+    metadata:
+      labels:
+        app: house-price-api
+        component: ml-api
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+        mlops.company.com/model-hash: "sha256:abc123..."
+        
+    spec:
+      serviceAccountName: mlops-service-account
+      automountServiceAccountToken: true
+      
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: "OnRootMismatch"
+        
+      # Init container for model validation
+      initContainers:
+      - name: model-validator
+        image: house-price-api:latest
+        imagePullPolicy: IfNotPresent
+        command: ['python', '-c']
+        args:
+          - |
+            import os
+            import sys
+            model_path = os.getenv('MODEL_PATH', '/app/data/models')
+            model_file = f"{model_path}/random_forest_model.pkl"
+            if not os.path.exists(model_file):
+                print(f"ERROR: Model file not found at {model_file}")
+                sys.exit(1)
+            print(f"SUCCESS: Model file found at {model_file}")
+            
+        env:
+        - name: MODEL_PATH
+          value: "/app/data/models"
+          
+        volumeMounts:
+        - name: model-storage
+          mountPath: /app/data/models
+          readOnly: true
+          
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+              
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+            
+      # Main application container
+      containers:
+      - name: api
+        image: house-price-api:latest
+        imagePullPolicy: IfNotPresent
+        
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+          
+        # Environment variables
+        env:
+        - name: MODEL_PATH
+          value: "/app/data/models"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: WORKERS
+          value: "1"
+        - name: HOST
+          value: "0.0.0.0"
+        - name: PORT
+          value: "8000"
+        - name: PYTHONPATH
+          value: "/app"
+        - name: ENVIRONMENT
+          value: "production"
+        - name: MLFLOW_TRACKING_URI
+          valueFrom:
+            configMapKeyRef:
+              name: mlops-config
+              key: mlflow_uri
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: mlops-secrets
+              key: database_url
+              optional: true
+              
+        # Resource requirements
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+            ephemeral-storage: 1Gi
+          limits:
+            cpu: 2
+            memory: 4Gi
+            ephemeral-storage: 2Gi
+            
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+          
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+          successThreshold: 1
+          
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+          
+        # Security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+              
+        # Volume mounts
+        volumeMounts:
+        - name: model-storage
+          mountPath: /app/data/models
+          readOnly: true
+        - name: config-volume
+          mountPath: /app/configs
+          readOnly: true
+        - name: tmp-volume
+          mountPath: /tmp
+        - name: app-logs
+          mountPath: /app/logs
+        - name: cache-volume
+          mountPath: /app/cache
+          
+      # Sidecar container for log forwarding
+      - name: log-forwarder
+        image: fluent/fluent-bit:2.1.8
+        imagePullPolicy: IfNotPresent
+        
+        env:
+        - name: FLUENTD_CONF
+          value: "fluent-bit.conf"
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: KUBERNETES_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+              
+        volumeMounts:
+        - name: app-logs
+          mountPath: /app/logs
+          readOnly: true
+        - name: fluent-bit-config
+          mountPath: /fluent-bit/etc
+          
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+            
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+              
+      # Volumes
+      volumes:
+      # Model storage (PVC)
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: mlops-model-pvc
+          
+      # Configuration
+      - name: config-volume
+        configMap:
+          name: mlops-config
+          defaultMode: 0644
+          
+      # Temporary files
+      - name: tmp-volume
+        emptyDir:
+          sizeLimit: 1Gi
+          
+      # Application logs
+      - name: app-logs
+        emptyDir:
+          sizeLimit: 500Mi
+          
+      # Cache volume
+      - name: cache-volume
+        emptyDir:
+          sizeLimit: 500Mi
+          
+      # Fluent Bit configuration
+      - name: fluent-bit-config
+        configMap:
+          name: fluent-bit-config
+          
+      # Pod scheduling
+      affinity:
+        # Prefer to spread across nodes
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - house-price-api
+              topologyKey: kubernetes.io/hostname
+              
+        # Prefer nodes with ML workload
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: workload-type
+                operator: In
+                values:
+                - ml-inference
+                - general
+                
+      # Tolerations for dedicated nodes
+      tolerations:
+      - key: "ml-workload"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+        
+      # Restart policy
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      
+      # DNS configuration
+      dnsPolicy: ClusterFirst
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+        - name: edns0
+          
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: house-price-api-hpa
+  namespace: mlops
+  labels:
+    app: house-price-api
+    component: autoscaling
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: house-price-api
+    
+  minReplicas: 2
+  maxReplicas: 10
+  
+  metrics:
+  # CPU utilization
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+        
+  # Memory utilization
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+        
+  # Custom metrics (requests per second)
+  - type: Pods
+    pods:
+      metric:
+        name: http_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "100"
+        
+  # Scale-up/down behavior
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Max
+      
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      selectPolicy: Min
+      
+---
+# Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: house-price-api-pdb
+  namespace: mlops
+  labels:
+    app: house-price-api
+    component: availability
+spec:
+  selector:
+    matchLabels:
+      app: house-price-api
+      
+  # Keep at least 50% of pods available during disruptions
+  minAvailable: 50%
+  
+  # Alternative: specify max unavailable
+  # maxUnavailable: 1
+  
+---
+# ConfigMap for application configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mlops-config
+  namespace: mlops
+  labels:
+    app: house-price-api
+    component: configuration
+data:
+  # Application settings
+  app_name: "House Price Prediction API"
+  app_version: "1.0.0"
+  environment: "production"
+  
+  # API configuration
+  host: "0.0.0.0"
+  port: "8000"
+  workers: "1"
+  log_level: "INFO"
+  
+  # Model configuration
+  model_path: "/app/data/models"
+  model_name: "random_forest_model.pkl"
+  
+  # MLflow configuration
+  mlflow_uri: "http://mlflow-service.mlops.svc.cluster.local:5000"
+  experiment_name: "house-price-prediction"
+  
+  # Database configuration (non-sensitive)
+  database_host: "postgres-service.mlops.svc.cluster.local"
+  database_port: "5432"
+  database_name: "mlops"
+  
+  # Monitoring configuration
+  metrics_enabled: "true"
+  metrics_port: "8000"
+  metrics_path: "/metrics"
+  
+  # Cache configuration
+  cache_enabled: "false"
+  cache_ttl: "300"
+  
+  # Rate limiting
+  rate_limit_enabled: "true"
+  rate_limit_requests: "100"
+  rate_limit_window: "60"
+  
+---
+# Secret for sensitive configuration
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mlops-secrets
+  namespace: mlops
+  labels:
+    app: house-price-api
+    component: configuration
+type: Opaque
+data:
+  # Database credentials (base64 encoded)
+  database_url: cG9zdGdyZXNxbDovL21sb3BzOm1sb3BzQHBvc3RncmVzLXNlcnZpY2UubWxvcHMuc3ZjLmNsdXN0ZXIubG9jYWw6NTQzMi9tbG9wcw==
+  database_user: bWxvcHM=
+  database_password: bWxvcHNfcGFzc3dvcmQ=
+  
+  # JWT secret for API authentication
+  jwt_secret: c3VwZXJfc2VjcmV0X2p3dF9rZXk=
+  
+  # API keys for external services
+  external_api_key: eW91cl9leHRlcm5hbF9hcGlfa2V5
+  
+---
+# Fluent Bit ConfigMap for logging
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: mlops
+  labels:
+    app: house-price-api
+    component: logging
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush         5
+        Log_Level     info
+        Daemon        off
+        Parsers_File  parsers.conf
+        HTTP_Server   On
+        HTTP_Listen   0.0.0.0
+        HTTP_Port     2020
+
+    [INPUT]
+        Name              tail
+        Path              /app/logs/*.log
+        Parser            json
+        Tag               api.logs
+        Refresh_Interval  5
+        Mem_Buf_Limit     50MB
+
+    [OUTPUT]
+        Name  stdout
+        Match *
+        Format json_lines
+        
+  parsers.conf: |
+    [PARSER]
+        Name        json
+        Format      json
+        Time_Key    timestamp
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+        Time_Keep   On

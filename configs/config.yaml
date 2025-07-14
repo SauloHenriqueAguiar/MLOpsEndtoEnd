@@ -1,0 +1,390 @@
+# Configuração principal do projeto MLOps House Price Prediction
+# config.yaml
+
+# Informações do projeto
+project:
+  name: "house-price-prediction"
+  version: "1.0.0"
+  description: "MLOps pipeline for house price prediction using Random Forest"
+  author: "MLOps Team"
+  created_date: "2024-01-15"
+
+# Configurações de dados
+data:
+  # Caminhos de dados
+  paths:
+    raw_data: "data/raw"
+    processed_data: "data/processed"
+    models: "data/models"
+    logs: "logs"
+    artifacts: "artifacts"
+    
+  # Arquivo de dados principais
+  raw_file: "house_prices.csv"
+  
+  # Configurações de geração de dados sintéticos
+  synthetic:
+    n_samples: 1000
+    random_seed: 42
+    noise_level: 0.1
+    
+  # Validação de dados
+  validation:
+    min_area: 30
+    max_area: 500
+    min_price: 50000
+    max_price: 2000000
+    min_age: 0
+    max_age: 50
+    
+  # Divisão de dados
+  split:
+    test_size: 0.2
+    validation_size: 0.2
+    random_state: 42
+    stratify: false
+
+# Configurações de features
+features:
+  # Features numéricas originais
+  numeric_features:
+    - "area"
+    - "quartos"
+    - "banheiros"
+    - "idade" 
+    - "garagem"
+    
+  # Features categóricas
+  categorical_features:
+    - "bairro"
+    
+  # Features derivadas (feature engineering)
+  derived_features:
+    - "bairro_encoded"
+    - "area_per_room"
+    - "bathroom_ratio"
+    - "age_squared"
+    - "total_rooms"
+    - "is_new"
+    
+  # Target
+  target: "preco"
+  
+  # Configurações de encoding
+  encoding:
+    method: "label_encoder"
+    handle_unknown: "use_encoded_value"
+    unknown_value: 0
+
+# Configurações do modelo (referência ao model_config.yaml)
+model:
+  config_file: "configs/model_config.yaml"
+  registry:
+    backend: "mlflow"
+    tracking_uri: "http://localhost:5000"
+    experiment_name: "house-price-prediction"
+    
+# Configurações de treinamento
+training:
+  # Otimização de hiperparâmetros
+  hyperparameter_tuning:
+    enabled: true
+    method: "grid_search"
+    cv_folds: 5
+    scoring: "neg_mean_squared_error"
+    n_jobs: -1
+    
+  # Validação cruzada
+  cross_validation:
+    enabled: true
+    cv_folds: 5
+    shuffle: true
+    random_state: 42
+    
+  # Métricas de avaliação
+  metrics:
+    primary: "r2"
+    secondary:
+      - "rmse"
+      - "mae"
+      - "mape"
+      
+  # Critérios de qualidade
+  quality_gates:
+    min_r2: 0.70
+    max_rmse: 100000
+    max_mape: 15.0
+    min_coverage: 95.0
+
+# Configurações da API
+api:
+  # Configurações do servidor
+  server:
+    host: "0.0.0.0"
+    port: 8000
+    workers: 1
+    reload: false
+    
+  # Configurações de CORS
+  cors:
+    allow_origins: ["*"]
+    allow_credentials: true
+    allow_methods: ["*"]
+    allow_headers: ["*"]
+    
+  # Configurações de rate limiting
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 100
+    burst_size: 20
+    
+  # Configurações de cache
+  cache:
+    enabled: false
+    ttl_seconds: 300
+    max_size: 1000
+    
+  # Configurações de predição
+  prediction:
+    batch_size_limit: 100
+    timeout_seconds: 30
+    confidence_threshold: 0.8
+
+# Configurações de logging
+logging:
+  # Nível de log
+  level: "INFO"
+  
+  # Formato de log
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  # Configurações de arquivo
+  file:
+    enabled: true
+    path: "logs/app.log"
+    max_size: "10MB"
+    backup_count: 5
+    
+  # Configurações de console
+  console:
+    enabled: true
+    
+  # Loggers específicos
+  loggers:
+    uvicorn:
+      level: "INFO"
+    mlflow:
+      level: "WARNING"
+    sklearn:
+      level: "WARNING"
+
+# Configurações de Docker
+docker:
+  # Imagem base
+  base_image: "python:3.9-slim"
+  
+  # Tags de imagem
+  api_image: "house-price-api"
+  training_image: "house-price-training"
+  
+  # Configurações de build
+  build:
+    context: "."
+    dockerfile_api: "docker/Dockerfile.api"
+    dockerfile_training: "docker/Dockerfile.training"
+    
+  # Configurações de volume
+  volumes:
+    data: "/app/data"
+    models: "/app/data/models"
+    logs: "/app/logs"
+
+# Configurações de Kubernetes
+kubernetes:
+  # Namespace
+  namespace: "mlops"
+  
+  # Configurações de deployment
+  deployment:
+    replicas: 3
+    strategy: "RollingUpdate"
+    max_surge: 1
+    max_unavailable: 0
+    
+  # Recursos
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+      
+  # Health checks
+  health_checks:
+    liveness:
+      path: "/health"
+      initial_delay: 30
+      period: 10
+      timeout: 5
+      failure_threshold: 3
+    readiness:
+      path: "/health"
+      initial_delay: 5
+      period: 5
+      timeout: 3
+      failure_threshold: 3
+      
+  # Service
+  service:
+    type: "ClusterIP"
+    port: 8000
+    target_port: 8000
+    
+  # Ingress
+  ingress:
+    enabled: true
+    host: "house-price-api.local"
+    path: "/"
+    tls: false
+
+# Configurações de monitoramento
+monitoring:
+  # Métricas
+  metrics:
+    enabled: true
+    endpoint: "/metrics"
+    
+  # Prometheus
+  prometheus:
+    enabled: true
+    scrape_interval: "15s"
+    
+  # Grafana
+  grafana:
+    enabled: false
+    dashboard_path: "monitoring/dashboards"
+    
+  # Alertas
+  alerts:
+    enabled: true
+    channels:
+      - "slack"
+      - "email"
+      
+  # Thresholds para alertas
+  thresholds:
+    response_time_ms: 1000
+    error_rate_percent: 5.0
+    cpu_usage_percent: 80.0
+    memory_usage_percent: 85.0
+    disk_usage_percent: 90.0
+
+# Configurações de segurança
+security:
+  # Autenticação
+  authentication:
+    enabled: false
+    method: "jwt"
+    secret_key: "${JWT_SECRET_KEY}"
+    algorithm: "HS256"
+    expire_minutes: 30
+    
+  # Validação de input
+  input_validation:
+    strict: true
+    sanitize: true
+    max_string_length: 100
+    
+  # HTTPS
+  https:
+    enabled: false
+    cert_file: ""
+    key_file: ""
+
+# Configurações de backup
+backup:
+  # Modelos
+  models:
+    enabled: true
+    frequency: "daily"
+    retention_days: 30
+    storage: "local"
+    
+  # Dados
+  data:
+    enabled: true
+    frequency: "weekly"
+    retention_days: 90
+    storage: "local"
+    
+  # Logs
+  logs:
+    enabled: true
+    frequency: "daily"
+    retention_days: 7
+    storage: "local"
+
+# Configurações de CI/CD
+cicd:
+  # Pipeline
+  pipeline:
+    trigger: "push"
+    branches:
+      - "main"
+      - "develop"
+      
+  # Stages
+  stages:
+    - "test"
+    - "build"
+    - "deploy"
+    
+  # Environments
+  environments:
+    development:
+      auto_deploy: true
+    staging:
+      auto_deploy: false
+      approval_required: true
+    production:
+      auto_deploy: false
+      approval_required: true
+      
+  # Notificações
+  notifications:
+    slack:
+      webhook_url: "${SLACK_WEBHOOK_URL}"
+    email:
+      recipients: ["team@company.com"]
+
+# Configurações de ambiente
+environment:
+  # Variáveis de ambiente
+  variables:
+    PYTHONPATH: "/app"
+    MODEL_PATH: "/app/data/models"
+    LOG_LEVEL: "INFO"
+    
+  # Secrets (usar variáveis de ambiente)
+  secrets:
+    mlflow_tracking_uri: "${MLFLOW_TRACKING_URI}"
+    database_url: "${DATABASE_URL}"
+    jwt_secret: "${JWT_SECRET_KEY}"
+    
+# Configurações específicas por ambiente
+environments:
+  development:
+    debug: true
+    reload: true
+    log_level: "DEBUG"
+    
+  staging:
+    debug: false
+    reload: false
+    log_level: "INFO"
+    
+  production:
+    debug: false
+    reload: false
+    log_level: "WARNING"

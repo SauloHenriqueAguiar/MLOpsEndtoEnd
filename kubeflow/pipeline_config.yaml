@@ -1,0 +1,348 @@
+# Configuração do Pipeline Kubeflow para House Price Prediction
+# pipeline_config.yaml
+
+# Metadados do Pipeline
+pipeline:
+  name: "house-price-prediction-pipeline"
+  display_name: "House Price Prediction MLOps Pipeline"
+  description: "Pipeline end-to-end para treinamento e deploy de modelo de predição de preços de imóveis"
+  version: "1.0.0"
+  author: "MLOps Team"
+  created_date: "2024-01-15"
+
+# Configurações Globais
+global:
+  # Namespace Kubernetes
+  namespace: "mlops"
+  
+  # Service Account
+  service_account: "pipeline-runner"
+  
+  # Imagem base para componentes
+  base_image: "python:3.9-slim"
+  
+  # Registry de imagens
+  image_registry: "docker.io"
+  image_prefix: "mlops"
+  
+  # Configurações de recursos padrão
+  default_resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+
+# Configurações de Armazenamento
+storage:
+  # Volume para dados
+  data_volume:
+    name: "mlops-data-pvc"
+    size: "10Gi"
+    storage_class: "standard"
+    access_mode: "ReadWriteMany"
+    
+  # Volume para modelos
+  model_volume:
+    name: "mlops-model-pvc"
+    size: "5Gi"
+    storage_class: "standard"
+    access_mode: "ReadWriteMany"
+    
+  # Volume para artefatos
+  artifacts_volume:
+    name: "mlops-artifacts-pvc"
+    size: "5Gi"
+    storage_class: "standard"
+    access_mode: "ReadWriteMany"
+
+# Configurações de MLflow
+mlflow:
+  tracking_uri: "http://mlflow-service.mlops.svc.cluster.local:5000"
+  experiment_name: "kubeflow-house-price-prediction"
+  registry_uri: "http://mlflow-service.mlops.svc.cluster.local:5000"
+
+# Configurações dos Componentes
+components:
+  # Data Preprocessing Component
+  data_preprocessing:
+    name: "data-preprocessing"
+    image: "mlops/data-preprocessing:latest"
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "2Gi"
+      limits:
+        cpu: "1"
+        memory: "4Gi"
+    parameters:
+      n_samples: 1000
+      test_size: 0.2
+      validation_size: 0.2
+      random_state: 42
+    
+  # Model Training Component
+  model_training:
+    name: "model-training"
+    image: "mlops/model-training:latest"
+    resources:
+      requests:
+        cpu: "1"
+        memory: "4Gi"
+      limits:
+        cpu: "4"
+        memory: "8Gi"
+    parameters:
+      algorithm: "random_forest"
+      hyperparameter_tuning: true
+      cv_folds: 5
+      n_estimators: [100, 200, 300]
+      max_depth: [10, 20, null]
+      
+  # Model Validation Component
+  model_validation:
+    name: "model-validation"
+    image: "mlops/model-validation:latest"
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "2Gi"
+      limits:
+        cpu: "1"
+        memory: "4Gi"
+    parameters:
+      min_r2_score: 0.70
+      max_rmse: 100000
+      max_mape: 15.0
+      robustness_test: true
+      
+  # Model Deployment Component
+  model_deployment:
+    name: "model-deployment"
+    image: "mlops/model-deployment:latest"
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "1"
+        memory: "2Gi"
+    parameters:
+      deployment_name: "house-price-api"
+      replicas: 3
+      port: 8000
+
+# Configurações de Pipeline Execution
+execution:
+  # Parallelismo
+  parallelism: 4
+  
+  # Timeout (em segundos)
+  timeout: 7200  # 2 horas
+  
+  # Retry policy
+  retry:
+    max_retries: 3
+    backoff_factor: 2
+    
+  # Node selector para execução
+  node_selector:
+    workload-type: "ml-training"
+    
+  # Tolerations
+  tolerations:
+    - key: "ml-workload"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+
+# Configurações de Notificações
+notifications:
+  # Slack
+  slack:
+    enabled: false
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    channels:
+      success: "#mlops-success"
+      failure: "#mlops-alerts"
+      
+  # Email
+  email:
+    enabled: false
+    smtp_server: "smtp.company.com"
+    recipients:
+      - "mlops-team@company.com"
+      
+# Configurações de Monitoramento
+monitoring:
+  # Métricas customizadas
+  custom_metrics:
+    enabled: true
+    metrics:
+      - "pipeline_duration"
+      - "model_accuracy"
+      - "data_quality_score"
+      
+  # Logs
+  logging:
+    level: "INFO"
+    format: "json"
+    
+# Configurações de Triggers
+triggers:
+  # Schedule (Cron)
+  schedule:
+    enabled: false
+    cron: "0 2 * * 1"  # Segunda-feira às 2h
+    timezone: "UTC"
+    
+  # Webhook
+  webhook:
+    enabled: false
+    endpoint: "/webhook/trigger"
+    
+  # File watcher
+  file_watcher:
+    enabled: false
+    path: "/data/raw"
+    pattern: "*.csv"
+
+# Configurações de Segurança
+security:
+  # RBAC
+  rbac:
+    enabled: true
+    
+  # Pod Security Context
+  pod_security_context:
+    run_as_non_root: true
+    run_as_user: 1000
+    run_as_group: 1000
+    fs_group: 1000
+    
+  # Security Context
+  security_context:
+    allow_privilege_escalation: false
+    read_only_root_filesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+# Configurações de Cache
+cache:
+  # Cache de componentes
+  enabled: true
+  
+  # TTL em segundos
+  ttl: 3600  # 1 hora
+  
+  # Estratégia de cache
+  strategy: "content_hash"
+  
+# Configurações de Artefatos
+artifacts:
+  # Artefatos de dados
+  data_artifacts:
+    raw_data: "data/raw/house_prices.csv"
+    processed_data: "data/processed/"
+    
+  # Artefatos de modelo
+  model_artifacts:
+    trained_model: "models/random_forest_model.pkl"
+    model_metrics: "models/model_metrics.json"
+    validation_report: "models/validation_results.json"
+    
+  # Artefatos de pipeline
+  pipeline_artifacts:
+    execution_report: "reports/pipeline_execution.json"
+    logs: "logs/pipeline.log"
+
+# Configurações por Ambiente
+environments:
+  development:
+    global:
+      default_resources:
+        requests:
+          cpu: "250m"
+          memory: "512Mi"
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+    execution:
+      parallelism: 2
+      timeout: 3600
+      
+  staging:
+    global:
+      default_resources:
+        requests:
+          cpu: "500m"
+          memory: "1Gi"
+        limits:
+          cpu: "2"
+          memory: "4Gi"
+    execution:
+      parallelism: 3
+      timeout: 5400
+      
+  production:
+    global:
+      default_resources:
+        requests:
+          cpu: "1"
+          memory: "2Gi"
+        limits:
+          cpu: "4"
+          memory: "8Gi"
+    execution:
+      parallelism: 4
+      timeout: 7200
+    monitoring:
+      custom_metrics:
+        enabled: true
+    notifications:
+      slack:
+        enabled: true
+      email:
+        enabled: true
+
+# Configurações de Backup
+backup:
+  # Backup de artefatos
+  artifacts:
+    enabled: true
+    schedule: "0 4 * * *"  # Diário às 4h
+    retention_days: 30
+    
+  # Backup de modelos
+  models:
+    enabled: true
+    schedule: "0 3 * * *"  # Diário às 3h
+    retention_days: 90
+
+# Configurações de Compliance
+compliance:
+  # Auditoria
+  audit:
+    enabled: true
+    log_all_executions: true
+    
+  # Data governance
+  data_governance:
+    track_data_lineage: true
+    validate_data_schema: true
+    
+# Configurações de Performance
+performance:
+  # Otimizações
+  optimizations:
+    enable_caching: true
+    parallel_execution: true
+    resource_optimization: true
+    
+  # Limites
+  limits:
+    max_pipeline_duration: 7200  # 2 horas
+    max_component_duration: 3600  # 1 hora
+    max_concurrent_pipelines: 5
